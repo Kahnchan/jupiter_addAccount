@@ -1,0 +1,127 @@
+import type { NextPage } from "next";
+import Head from "next/head";
+import { Button, Input, Table, message } from 'antd'
+import { useCallback, useState } from "react";
+import { PublicKey, Connection, VersionedTransaction, } from '@solana/web3.js'
+import { getMint }from '@solana/spl-token'
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import {
+  WalletMultiButton
+} from '@solana/wallet-adapter-react-ui';
+import axios from "axios";
+const validateSolanaAddress = (addr: string) => {
+    let publicKey: PublicKey;
+    try {
+        publicKey = new PublicKey(addr);
+        return PublicKey.isOnCurve(publicKey.toBytes());
+      } catch (err) {
+        return false;
+      }
+    };
+
+
+    const hasReferralToken = async (outputMint: string, connection: Connection) => {
+        const [feeAccount] = PublicKey.findProgramAddressSync(
+            [
+              Buffer.from('referral_ata'),
+              new PublicKey("HtwBxBy2gzLFPvQLykBAkA9LWV7BEw6KxAX8HbAPJq2").toBuffer(),
+              new PublicKey(outputMint).toBuffer(),
+            ],
+            // jupiter Referral program id
+            // hard code https://station.jup.ag/docs/additional-topics/referral-program
+            new PublicKey('REFER4ZgmyYx9c6He5XfaTMiGfdLwRnkV4RPp9t9iF3'),
+          );
+      
+          const accountInfo = await connection.getAccountInfo(feeAccount);
+          return { result: Boolean(accountInfo), outputMint }
+    }
+
+    type DataType = { address: string, decimals: number };
+
+    const columns = [
+        {
+          title: '地址',
+          dataIndex: 'address',
+          key: 'address',
+        },
+        {
+          title: '精度',
+          dataIndex: 'decimals',
+          key: 'decimals',
+        },
+      ];
+
+
+const Home: NextPage = (props) => {
+    const [loading, setLoading] = useState(false)
+    
+    const { publicKey, sendTransaction } = useWallet()
+
+    const [input, setInput]= useState('')
+    const { connection } = useConnection()
+
+
+    const onClick = useCallback(async () => {
+        if (!input.trim()){
+            return 
+        }
+        setLoading(true)
+        try {
+            // const isValidate = validateSolanaAddress(input)
+            // console.log('isValidate', isValidate)
+            // if (!isValidate) { return }
+            const mintAddress = new PublicKey(input);
+            const mintInfo = await getMint(connection, mintAddress);
+            if (!mintInfo) {
+                return 
+            }
+            const referralRes = await hasReferralToken(mintInfo.address.toBase58(), connection);
+            if (referralRes.result) {
+                message.info('has referral')
+                setInput('')
+                return 
+            }
+            const data = await axios.post('/api/create', {
+                mint: mintInfo.address.toBase58(),
+                feePayer:publicKey.toBase58(),
+            })
+            console.log('data', data)
+            let latestBlockhash = await connection.getLatestBlockhash()
+            const transation = VersionedTransaction.deserialize(Buffer.from(data.data.tx, 'base64'))
+            transation.message.recentBlockhash = latestBlockhash.blockhash
+                        // Send transaction and await for signature
+                        const signature = await sendTransaction(transation, connection);
+    
+                        // Await for confirmation
+                        await connection.confirmTransaction({ signature, ...latestBlockhash }, 'confirmed');
+            
+                        console.log('signature',signature);
+                        message.success("success")
+                        setInput('')
+           
+        } finally {
+            setLoading(false)
+        }
+
+
+    }, [input, connection, publicKey, sendTransaction])
+
+  return (
+    <div>
+      <Head>
+        <title>Solana Scaffold</title>
+        <meta
+          name="description"
+          content="Solana Scaffold"
+        />
+      </Head>
+        <div>
+            <Input placeholder="tokenAddress" value={input} onChange={(e) => setInput(e.target.value)}></Input>
+            <Button type="primary" loading={loading} onClick={onClick}>Add</Button>
+            <WalletMultiButton/>
+        </div>
+    </div>
+  );
+};
+
+export default Home;
