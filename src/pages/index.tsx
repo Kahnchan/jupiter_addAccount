@@ -1,20 +1,15 @@
-import type { NextPage } from "next";
-import Head from "next/head";
-import { HomeView } from "../views";
+import { useEffect } from 'react';
+import { useRouter } from 'next/router';
 
-const Home: NextPage = (props) => {
-  return (
-    <div>
-      <Head>
-        <title>Solana Scaffold</title>
-        <meta
-          name="description"
-          content="Solana Scaffold"
-        />
-      </Head>
-      <HomeView />
-    </div>
-  );
+const IndexPage = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    // 重定向到 referral 页面
+    router.push('/referral');
+  }, [router]);
+
+  return null; // 或者可以返回一个加载指示器
 };
 
-export default Home;
+export default IndexPage;

@@ -1,6 +1,6 @@
 import type { NextPage } from "next";
 import Head from "next/head";
-import { Button, Input, Table, message } from 'antd'
+import { Button, Input, Table, message, notification } from 'antd'
 import { useCallback, useState } from "react";
 import { PublicKey, Connection, VersionedTransaction, } from '@solana/web3.js'
 import { getMint }from '@solana/spl-token'
@@ -107,7 +107,7 @@ const Home: NextPage = (props) => {
     }, [input, connection, publicKey, sendTransaction])
 
   return (
-    <div>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
       <Head>
         <title>Solana Scaffold</title>
         <meta
@@ -115,11 +115,21 @@ const Home: NextPage = (props) => {
           content="Solana Scaffold"
         />
       </Head>
-        <div>
-            <Input placeholder="tokenAddress" value={input} onChange={(e) => setInput(e.target.value)}></Input>
-            <Button type="primary" loading={loading} onClick={onClick}>Add</Button>
-            <WalletMultiButton/>
+      <h1 className="text-3xl font-bold mb-6 text-indigo-600">添加 Token 地址</h1>
+      <div className="bg-white shadow-md rounded-lg p-6 w-full max-w-md">
+        <div style={{ marginBottom: '20px'}} >
+          <Input
+            placeholder="输入 Token 地址"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            style={{ width: '500px', marginRight: '20px' }}
+          />
+          <Button type="primary" loading={loading} onClick={onClick}>
+            添加
+          </Button>
         </div>
+        <WalletMultiButton />
+      </div>
     </div>
   );
 };
